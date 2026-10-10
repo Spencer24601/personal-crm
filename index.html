@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Network</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #f0f2f5;
+      --border: #e2e5ea;
+      --text: #15181d;
+      --muted: #646b76;
+      --accent: #2f5bd3;
+      --accent-soft: #e6edfc;
+      --danger: #c23a32;
+      --danger-soft: #fbe9e7;
+      --warn: #9a6200;
+      --warn-soft: #fdf2dc;
+      --ok: #1f7a4d;
+      --ok-soft: #e3f4ea;
+      --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101216;
+        --surface: #181b21;
+        --surface-2: #20242b;
+        --border: #2c313a;
+        --text: #e8eaee;
+        --muted: #9aa2ae;
+        --accent: #7b9ef0;
+        --accent-soft: #1f2a44;
+        --danger: #f08178;
+        --danger-soft: #3a1f1d;
+        --warn: #f0c060;
+        --warn-soft: #362b14;
+        --ok: #6fd1a0;
+        --ok-soft: #16301f;
+        --shadow: none;
+        color-scheme: dark;
+      }
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px 64px; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 20px 0 16px;
+    }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+    header .who { color: var(--muted); font-size: 13px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+      padding: 8px 14px; cursor: pointer; font-weight: 500; font-size: 14px;
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    @media (prefers-color-scheme: dark) { .btn.primary { color: #0d1220; } }
+    .btn.primary:hover { filter: brightness(1.07); }
+    .btn.danger { color: var(--danger); }
+    .btn.small { padding: 4px 10px; font-size: 13px; }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .link { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font-weight: 500; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    .pad { padding: 20px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat { padding: 14px 16px; }
+    .stat .n { font-size: 26px; font-weight: 700; line-height: 1.1; }
+    .stat .l { color: var(--muted); font-size: 13px; }
+    .stat.overdue .n { color: var(--danger); }
+    .stat.soon .n { color: var(--warn); }
+
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .toolbar input[type=search] { flex: 1; min-width: 180px; }
+    input, select, textarea {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 72px; }
+    .toolbar select { width: auto; }
+
+    .section-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+      font-weight: 600; margin: 20px 4px 8px;
+    }
+    .list { overflow: hidden; }
+    .item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-top: 1px solid var(--border); cursor: pointer;
+    }
+    .item:first-child { border-top: none; }
+    .item:hover { background: var(--surface-2); }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+      display: grid; place-items: center; font-weight: 600; font-size: 14px; flex-shrink: 0;
+    }
+    .item .main { flex: 1; min-width: 0; }
+    .item .name { font-weight: 600; }
+    .item .sub { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pill {
+      font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+      background: var(--surface-2); color: var(--muted);
+    }
+    .pill.overdue { background: var(--danger-soft); color: var(--danger); }
+    .pill.soon { background: var(--warn-soft); color: var(--warn); }
+    .pill.later { background: var(--ok-soft); color: var(--ok); }
+    .empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+    /* detail */
+    .back { margin: 4px 0 12px; }
+    .detail-head { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+    .detail-head h2 { font-size: 22px; font-weight: 700; }
+    .meta { color: var(--muted); font-size: 14px; }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin-top: 14px; font-size: 14px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { word-break: break-word; white-space: pre-wrap; }
+    .followup-box {
+      margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--surface-2);
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between;
+    }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 4px; }
+    .field { margin-bottom: 12px; }
+
+    .timeline { margin-top: 8px; }
+    .entry { padding: 14px 16px; border-top: 1px solid var(--border); }
+    .entry:first-child { border-top: none; }
+    .entry .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .entry .when { font-weight: 600; font-size: 14px; }
+    .entry .kind { font-size: 12px; color: var(--muted); text-transform: capitalize; margin-left: 6px; }
+    .entry .body { margin-top: 4px; white-space: pre-wrap; }
+    .entry .next { margin-top: 6px; font-size: 14px; color: var(--muted); }
+    .entry .next b { color: var(--text); font-weight: 600; }
+
+    dialog {
+      border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text);
+      width: min(560px, calc(100vw - 32px)); padding: 0; margin: auto;
+    }
+    dialog::backdrop { background: rgba(10,12,16,.45); }
+    dialog form { padding: 20px; }
+    dialog h3 { font-size: 17px; margin-bottom: 14px; }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+    .login { max-width: 400px; margin: 12vh auto 0; }
+    .login h1 { font-size: 22px; margin-bottom: 6px; }
+    .login p { color: var(--muted); margin-bottom: 16px; }
+
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px;
+      opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 50; max-width: calc(100vw - 32px);
+    }
+    .toast.show { opacity: 1; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .stat { padding: 10px 12px; }
+      .stat .n { font-size: 22px; }
+      .grid2 { grid-template-columns: 1fr; }
+      .kv { grid-template-columns: 90px 1fr; }
+      .item .pill { font-size: 11px; padding: 2px 7px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Login -->
+    <section id="login-view" class="login card pad hidden">
+      <h1>Network</h1>
+      <p>Your personal CRM. Sign in with a one-time link sent to your email.</p>
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <button class="btn primary" type="submit" style="width:100%">Send sign-in link</button>
+      </form>
+      <p id="login-msg" class="meta" style="margin:12px 0 0"></p>
+    </section>
+
+    <!-- App -->
+    <section id="app-view" class="hidden">
+      <header>
+        <div>
+          <h1>Network</h1>
+          <div class="who" id="who"></div>
+        </div>
+        <div class="row">
+          <button class="btn small" id="export-btn" title="Download a CSV backup">Export</button>
+          <button class="btn small" id="logout-btn">Sign out</button>
+        </div>
+      </header>
+
+      <!-- List view -->
+      <div id="list-view">
+        <div class="stats">
+          <div class="card stat overdue"><div class="n" id="stat-overdue">0</div><div class="l">Overdue</div></div>
+          <div class="card stat soon"><div class="n" id="stat-soon">0</div><div class="l">Due in 7 days</div></div>
+          <div class="card stat"><div class="n" id="stat-total">0</div><div class="l">People</div></div>
+        </div>
+
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Search name, organization, notes…" />
+          <select id="sort">
+            <option value="followup">Sort: follow-up date</option>
+            <option value="recent">Sort: last contacted</option>
+            <option value="name">Sort: name</option>
+          </select>
+          <button class="btn primary" id="add-btn">+ Add person</button>
+        </div>
+
+        <div id="lists"></div>
+      </div>
+
+      <!-- Detail view -->
+      <div id="detail-view" class="hidden">
+        <button class="link back" id="back-btn">← All people</button>
+        <div class="card pad" id="detail-card"></div>
+
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Interaction log</span>
+          <button class="btn small primary" id="log-btn">+ Log interaction</button>
+        </div>
+        <div class="card timeline" id="timeline"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Contact dialog -->
+  <dialog id="contact-dialog">
+    <form id="contact-form" method="dialog">
+      <h3 id="contact-dialog-title">Add person</h3>
+      <div class="field"><label for="c-name">Name *</label><input id="c-name" required maxlength="200" /></div>
+      <div class="grid2">
+        <div class="field"><label for="c-org">Organization</label><input id="c-org" maxlength="200" placeholder="e.g. Intermountain Health" /></div>
+        <div class="field"><label for="c-role">Role</label><input id="c-role" maxlength="200" placeholder="e.g. Family physician" /></div>
+      </div>
+      <div class="field"><label for="c-how">How we met / who introduced us</label><input id="c-how" maxlength="300" placeholder="e.g. Intro from Dad" /></div>
+      <div class="grid2">
+        <div class="field"><label for="c-email">Email</label><input id="c-email" type="email" maxlength="200" /></div>
+        <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="tel" maxlength="50" /></div>
+      </div>
+      <div class="field"><label for="c-follow">Follow up by</label><input id="c-follow" type="date" /></div>
+      <div class="field"><label for="c-notes">Notes</label><textarea id="c-notes" maxlength="5000" placeholder="Interests, family, what they care about, how you can help them…"></textarea></div>
+      <div class="actions">
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Interaction dialog -->
+  <dialog id="log-dialog">
+    <form id="log-form" method="dialog">
+      <h3 id="log-dialog-title">Log interaction</h3>
+      <div class="grid2">
+        <div class="field"><label for="l-date">Date</label><input id="l-date" type="date" required /></div>
+        <div class="field">
+          <label for="l-kind">Type</label>
+          <select id="l-kind">
+            <option value="meeting">Meeting</option>
+            <option value="call">Call</option>
+            <option value="email">Email</option>
+            <option value="text">Text</option>
+            <option value="event">Event</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="l-summary">What did you talk about? *</label><textarea id="l-summary" required maxlength="5000" placeholder="Key points, what they offered, what you promised…"></textarea></div>
+      <div class="field"><label for="l-next">Next step</label><input id="l-next" maxlength="500" placeholder="e.g. Send thank-you note and the interview summary" /></div>
+      <div class="field" id="l-follow-field">
+        <label>Next follow-up</label>
+        <div class="chips" id="l-chips">
+          <button type="button" class="btn small" data-days="7">1 week</button>
+          <button type="button" class="btn small" data-days="14">2 weeks</button>
+          <button type="button" class="btn small" data-days="30">1 month</button>
+          <button type="button" class="btn small" data-days="90">3 months</button>
+          <button type="button" class="btn small" data-days="">None</button>
+        </div>
+        <input id="l-follow" type="date" style="margin-top:8px" />
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://lbejhxvcmjaiictddzdu.supabase.co';
+    // Publishable key: safe to ship in the browser. Row-level security limits every row to its owner.
+    const SUPABASE_KEY = 'sb_publishable_y_gzgA2BrVSJnjvQ24qkjw_MMNxfxiN';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const $ = (id) => document.getElementById(id);
+    const state = { user: null, contacts: [], lastContact: {}, current: null, interactions: [], editingLog: null };
+
+    // ---------- helpers ----------
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const pad = (n) => String(n).padStart(2, '0');
+    const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const today = () => toISO(new Date());
+    const parseISO = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+    const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return toISO(d); };
+    const daysUntil = (s) => Math.round((parseISO(s) - parseISO(today())) / 86400000);
+    const fmtDate = (s) => parseISO(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: parseISO(s).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+    const initials = (name) => name.trim().split(/\s+/).filter(w => /^[A-Za-z]/.test(w) && !/^(dr|mr|mrs|ms)\.?$/i.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('') || name.trim()[0]?.toUpperCase() || '?';
+    const blank = (v) => { const t = (v || '').trim(); return t === '' ? null : t; };
+
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+    }
+    function fail(err) { console.error(err); toast(err?.message || 'Something went wrong'); }
+
+    function followPill(date) {
+      if (!date) return '<span class="pill">No follow-up</span>';
+      const n = daysUntil(date);
+      if (n < 0) return `<span class="pill overdue">${-n}d overdue</span>`;
+      if (n === 0) return '<span class="pill overdue">Today</span>';
+      if (n <= 7) return `<span class="pill soon">${n === 1 ? 'Tomorrow' : 'In ' + n + 'd'}</span>`;
+      return `<span class="pill later">${fmtDate(date)}</span>`;
+    }
+
+    function calendarLink(c) {
+      const start = c.follow_up_on.replaceAll('-', '');
+      const endD = parseISO(c.follow_up_on); endD.setDate(endD.getDate() + 1);
+      const end = toISO(endD).replaceAll('-', '');
+      const details = [c.organization, c.role].filter(Boolean).join(' · ') + (c.email ? `\n${c.email}` : '') + (c.phone ? `\n${c.phone}` : '');
+      const p = new URLSearchParams({ action: 'TEMPLATE', text: `Follow up: ${c.name}`, dates: `${start}/${end}`, details });
+      return `https://calendar.google.com/calendar/render?${p}`;
+    }
+
+    // ---------- auth ----------
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      setUser(session?.user ?? null);
+      sb.auth.onAuthStateChange((_e, s) => {
+        const u = s?.user ?? null;
+        if ((u?.id ?? null) !== (state.user?.id ?? null)) setUser(u);
+      });
+    }
+
+    function setUser(user) {
+      state.user = user;
+      $('login-view').classList.toggle('hidden', !!user);
+      $('app-view').classList.toggle('hidden', !user);
+      if (user) {
+        $('who').textContent = user.email;
+        if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
+        loadContacts();
+      }
+    }
+
+    $('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.submitter; btn.disabled = true;
+      const email = $('login-email').value.trim();
+      const redirect = location.origin + location.pathname;
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect, shouldCreateUser: false } });
+      btn.disabled = false;
+      $('login-msg').textContent = error ? `Couldn't send link: ${error.message}` : `Check ${email} for your sign-in link.`;
+    });
+
+    $('logout-btn').addEventListener('click', async () => { await sb.auth.signOut(); setUser(null); });
+
+    // ---------- data ----------
+    async function loadContacts() {
+      const [{ data: contacts, error: e1 }, { data: logs, error: e2 }] = await Promise.all([
+        sb.from('crm_contacts').select('*').order('name'),
+        sb.from('crm_interactions').select('contact_id, happened_on'),
+      ]);
+      if (e1 || e2) return fail(e1 || e2);
+      state.contacts = contacts;
+      state.lastContact = {};
+      for (const l of logs) {
+        if (!state.lastContact[l.contact_id] || l.happened_on > state.lastContact[l.contact_id]) state.lastContact[l.contact_id] = l.happened_on;
+      }
+      renderList();
+      if (state.current) {
+        const fresh = state.contacts.find(c => c.id === state.current.id);
+        if (fresh) { state.current = fresh; renderDetail(); } else showList();
+      }
+    }
+
+    async function loadInteractions() {
+      const { data, error } = await sb.from('crm_interactions').select('*')
+        .eq('contact_id', state.current.id).order('happened_on', { ascending: false }).order('created_at', { ascending: false });
+      if (error) return fail(error);
+      state.interactions = data;
+      renderTimeline();
+    }
+
+    // ---------- list ----------
+    function renderList() {
+      const q = $('search').value.trim().toLowerCase();
+      const sort = $('sort').value;
+      const cs = state.contacts;
+
+      $('stat-total').textContent = cs.length;
+      $('stat-overdue').textContent = cs.filter(c => c.follow_up_on && daysUntil(c.follow_up_on) <= 0).length;
+      $('stat-soon').textContent = cs.filter(c => c.follow_up_on && daysUntil(c.follow_up_on) > 0 && daysUntil(c.follow_up_on) <= 7).length;
+
+      let rows = cs.filter(c => !q || [c.name, c.organization, c.role, c.how_met, c.notes, c.email].some(v => v && v.toLowerCase().includes(q)));
+
+      const byFollow = (a, b) => (a.follow_up_on || '9999') .localeCompare(b.follow_up_on || '9999') || a.name.localeCompare(b.name);
+      const byRecent = (a, b) => (state.lastContact[b.id] || '').localeCompare(state.lastContact[a.id] || '') || a.name.localeCompare(b.name);
+      const byName = (a, b) => a.name.localeCompare(b.name);
+      rows.sort(sort === 'recent' ? byRecent : sort === 'name' ? byName : byFollow);
+
+      const html = [];
+      if (!cs.length) {
+        html.push(`<div class="card empty">No one here yet. Start with the doctors and advisors you're interviewing.<br><br><button class="btn primary" onclick="openContact()">+ Add your first person</button></div>`);
+      } else if (!rows.length) {
+        html.push('<div class="card empty">No matches.</div>');
+      } else if (sort === 'followup' && !q) {
+        const due = rows.filter(c => c.follow_up_on && daysUntil(c.follow_up_on) <= 7);
+        const later = rows.filter(c => c.follow_up_on && daysUntil(c.follow_up_on) > 7);
+        const none = rows.filter(c => !c.follow_up_on);
+        if (due.length) html.push(group('Reach out this week', due));
+        if (later.length) html.push(group('Coming up', later));
+        if (none.length) html.push(group('No follow-up set', none));
+      } else {
+        html.push(group(q ? `${rows.length} result${rows.length === 1 ? '' : 's'}` : 'Everyone', rows));
+      }
+      $('lists').innerHTML = html.join('');
+    }
+
+    function group(title, rows) {
+      return `<div class="section-title">${esc(title)}</div><div class="card list">${rows.map(itemHTML).join('')}</div>`;
+    }
+
+    function itemHTML(c) {
+      const sub = [c.role, c.organization].filter(Boolean).join(' · ');
+      const last = state.lastContact[c.id];
+      const subLine = [sub, last ? `Last contact ${fmtDate(last)}` : 'Never logged'].filter(Boolean).join(' — ');
+      return `<div class="item" data-id="${c.id}" tabindex="0">
+        <div class="avatar">${esc(initials(c.name))}</div>
+        <div class="main"><div class="name">${esc(c.name)}</div><div class="sub">${esc(subLine)}</div></div>
+        ${followPill(c.follow_up_on)}
+      </div>`;
+    }
+
+    $('lists').addEventListener('click', (e) => { const it = e.target.closest('.item'); if (it) showDetail(it.dataset.id); });
+    $('lists').addEventListener('keydown', (e) => { const it = e.target.closest('.item'); if (it && e.key === 'Enter') showDetail(it.dataset.id); });
+    $('search').addEventListener('input', renderList);
+    $('sort').addEventListener('change', renderList);
+    $('add-btn').addEventListener('click', () => openContact());
+
+    // ---------- detail ----------
+    function showDetail(id) {
+      state.current = state.contacts.find(c => c.id === id);
+      if (!state.current) return;
+      $('list-view').classList.add('hidden');
+      $('detail-view').classList.remove('hidden');
+      state.interactions = [];
+      renderDetail();
+      $('timeline').innerHTML = '<div class="empty">Loading…</div>';
+      loadInteractions();
+      window.scrollTo(0, 0);
+    }
+
+    function showList() {
+      state.current = null;
+      $('detail-view').classList.add('hidden');
+      $('list-view').classList.remove('hidden');
+      renderList();
+    }
+    $('back-btn').addEventListener('click', showList);
+
+    function renderDetail() {
+      const c = state.current;
+      const sub = [c.role, c.organization].filter(Boolean).join(' · ');
+      const kv = [
+        ['How we met', c.how_met],
+        ['Email', c.email && `<a href="mailto:${esc(c.email)}" style="color:var(--accent)">${esc(c.email)}</a>`, true],
+        ['Phone', c.phone && `<a href="tel:${esc(c.phone)}" style="color:var(--accent)">${esc(c.phone)}</a>`, true],
+        ['Notes', c.notes],
+      ].filter(([, v]) => v);
+      const fu = c.follow_up_on;
+      $('detail-card').innerHTML = `
+        <div class="detail-head">
+          <div class="row" style="gap:14px;flex-wrap:nowrap">
+            <div class="avatar" style="width:48px;height:48px;font-size:17px">${esc(initials(c.name))}</div>
+            <div><h2>${esc(c.name)}</h2>${sub ? `<div class="meta">${esc(sub)}</div>` : ''}</div>
+          </div>
+          <div class="row">
+            <button class="btn small" id="edit-btn">Edit</button>
+            <button class="btn small danger" id="delete-btn">Delete</button>
+          </div>
+        </div>
+        ${kv.length ? `<dl class="kv">${kv.map(([k, v, raw]) => `<dt>${k}</dt><dd>${raw ? v : esc(v)}</dd>`).join('')}</dl>` : ''}
+        <div class="followup-box">
+          <div>
+            <div style="font-weight:600">${fu ? `Follow up ${daysUntil(fu) < 0 ? 'was due' : 'by'} ${fmtDate(fu)}` : 'No follow-up set'}</div>
+            <div class="meta">${fu ? followPill(fu) : 'Pick a date so this person doesn\'t slip.'}</div>
+          </div>
+          <div class="chips">
+            <button class="btn small" data-snooze="7">+1 wk</button>
+            <button class="btn small" data-snooze="30">+1 mo</button>
+            ${fu ? `<a class="btn small" href="${calendarLink(c)}" target="_blank" rel="noopener" style="text-decoration:none">Add to Google Calendar</a>
+                    <button class="btn small" data-snooze="">Clear</button>` : ''}
+          </div>
+        </div>`;
+      $('edit-btn').onclick = () => openContact(c);
+      $('delete-btn').onclick = deleteContact;
+      $('detail-card').querySelectorAll('[data-snooze]').forEach(b => b.onclick = () => setFollowUp(b.dataset.snooze === '' ? null : addDays(+b.dataset.snooze)));
+    }
+
+    async function setFollowUp(date) {
+      const { error } = await sb.from('crm_contacts').update({ follow_up_on: date }).eq('id', state.current.id);
+      if (error) return fail(error);
+      toast(date ? `Follow-up set for ${fmtDate(date)}` : 'Follow-up cleared');
+      loadContacts();
+    }
+
+    async function deleteContact() {
+      const c = state.current;
+      if (!confirm(`Delete ${c.name} and their entire interaction log? This can't be undone.`)) return;
+      const { error } = await sb.from('crm_contacts').delete().eq('id', c.id);
+      if (error) return fail(error);
+      toast(`Deleted ${c.name}`);
+      state.current = null;
+      showList();
+      loadContacts();
+    }
+
+    function renderTimeline() {
+      const list = state.interactions;
+      if (!list.length) {
+        $('timeline').innerHTML = '<div class="empty">No interactions logged yet.</div>';
+        return;
+      }
+      $('timeline').innerHTML = list.map(i => `
+        <div class="entry">
+          <div class="top">
+            <div><span class="when">${fmtDate(i.happened_on)}</span><span class="kind">${esc(i.kind)}</span></div>
+            <div class="row">
+              <button class="link" data-edit="${i.id}" style="font-size:13px">Edit</button>
+              <button class="link" data-del="${i.id}" style="font-size:13px;color:var(--danger)">Delete</button>
+            </div>
+          </div>
+          <div class="body">${esc(i.summary)}</div>
+          ${i.next_step ? `<div class="next"><b>Next:</b> ${esc(i.next_step)}</div>` : ''}
+        </div>`).join('');
+    }
+
+    $('timeline').addEventListener('click', async (e) => {
+      const ed = e.target.closest('[data-edit]'), del = e.target.closest('[data-del]');
+      if (ed) openLog(state.interactions.find(i => i.id === ed.dataset.edit));
+      if (del) {
+        if (!confirm('Delete this entry?')) return;
+        const { error } = await sb.from('crm_interactions').delete().eq('id', del.dataset.del);
+        if (error) return fail(error);
+        toast('Entry deleted');
+        await loadInteractions();
+        loadContacts();
+      }
+    });
+
+    // ---------- dialogs ----------
+    document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+
+    function openContact(c = null) {
+      state.editing = c;
+      $('contact-dialog-title').textContent = c ? `Edit ${c.name}` : 'Add person';
+      $('c-name').value = c?.name || '';
+      $('c-org').value = c?.organization || '';
+      $('c-role').value = c?.role || '';
+      $('c-how').value = c?.how_met || '';
+      $('c-email').value = c?.email || '';
+      $('c-phone').value = c?.phone || '';
+      $('c-follow').value = c ? (c.follow_up_on || '') : addDays(7);
+      $('c-notes').value = c?.notes || '';
+      $('contact-dialog').showModal();
+      $('c-name').focus();
+    }
+
+    $('contact-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.submitter; btn.disabled = true;
+      const row = {
+        name: $('c-name').value.trim(),
+        organization: blank($('c-org').value),
+        role: blank($('c-role').value),
+        how_met: blank($('c-how').value),
+        email: blank($('c-email').value),
+        phone: blank($('c-phone').value),
+        follow_up_on: $('c-follow').value || null,
+        notes: blank($('c-notes').value),
+      };
+      const q = state.editing
+        ? sb.from('crm_contacts').update(row).eq('id', state.editing.id).select().single()
+        : sb.from('crm_contacts').insert(row).select().single();
+      const { data, error } = await q;
+      btn.disabled = false;
+      if (error) return fail(error);
+      $('contact-dialog').close();
+      toast(state.editing ? 'Saved' : `Added ${data.name}`);
+      const wasNew = !state.editing;
+      await loadContacts();
+      if (wasNew) showDetail(data.id);
+    });
+
+    $('log-btn').addEventListener('click', () => openLog());
+
+    function openLog(entry = null) {
+      state.editingLog = entry;
+      $('log-dialog-title').textContent = entry ? 'Edit interaction' : `Log interaction with ${state.current.name}`;
+      $('l-date').value = entry?.happened_on || today();
+      $('l-kind').value = entry?.kind || 'meeting';
+      $('l-summary').value = entry?.summary || '';
+      $('l-next').value = entry?.next_step || '';
+      // Follow-up only applies to new entries; edit it from the contact card otherwise.
+      $('l-follow-field').classList.toggle('hidden', !!entry);
+      $('l-follow').value = entry ? '' : addDays(30);
+      highlightChip();
+      $('log-dialog').showModal();
+      $('l-summary').focus();
+    }
+
+    function highlightChip() {
+      const v = $('l-follow').value;
+      $('l-chips').querySelectorAll('[data-days]').forEach(b => {
+        const match = b.dataset.days === '' ? v === '' : v === addDays(+b.dataset.days);
+        b.classList.toggle('primary', match);
+      });
+    }
+    $('l-chips').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-days]'); if (!b) return;
+      $('l-follow').value = b.dataset.days === '' ? '' : addDays(+b.dataset.days);
+      highlightChip();
+    });
+    $('l-follow').addEventListener('input', highlightChip);
+
+    $('log-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.submitter; btn.disabled = true;
+      const row = {
+        happened_on: $('l-date').value,
+        kind: $('l-kind').value,
+        summary: $('l-summary').value.trim(),
+        next_step: blank($('l-next').value),
+      };
+      let error;
+      if (state.editingLog) {
+        ({ error } = await sb.from('crm_interactions').update(row).eq('id', state.editingLog.id));
+      } else {
+        ({ error } = await sb.from('crm_interactions').insert({ ...row, contact_id: state.current.id }));
+        if (!error) ({ error } = await sb.from('crm_contacts').update({ follow_up_on: $('l-follow').value || null }).eq('id', state.current.id));
+      }
+      btn.disabled = false;
+      if (error) return fail(error);
+      $('log-dialog').close();
+      toast(state.editingLog ? 'Entry updated' : 'Interaction logged');
+      await loadInteractions();
+      loadContacts();
+    });
+
+    // ---------- export ----------
+    $('export-btn').addEventListener('click', async () => {
+      const { data: logs, error } = await sb.from('crm_interactions').select('*').order('happened_on');
+      if (error) return fail(error);
+      const byId = Object.fromEntries(state.contacts.map(c => [c.id, c]));
+      const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines = [['type', 'name', 'organization', 'role', 'how_met', 'email', 'phone', 'follow_up_on', 'notes', 'date', 'kind', 'summary', 'next_step'].join(',')];
+      for (const c of state.contacts) lines.push(['contact', c.name, c.organization, c.role, c.how_met, c.email, c.phone, c.follow_up_on, c.notes, '', '', '', ''].map(cell).join(','));
+      for (const l of logs) lines.push(['interaction', byId[l.contact_id]?.name, '', '', '', '', '', '', '', l.happened_on, l.kind, l.summary, l.next_step].map(cell).join(','));
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `network-backup-${today()}.csv` });
+      a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    init();
+  </script>
+</body>
+</html>
