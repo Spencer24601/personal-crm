@@ -15,3 +15,11 @@ A one-page app for keeping track of the people in my network: who they are, what
 
 ## Database
 The schema is in `supabase/migrations/`. Tables: `crm_contacts` and `crm_interactions`.
+
+## Install as an app
+The site is a Progressive Web App (`manifest.json` + `sw.js`), so it can be installed like a native app:
+- **iPhone (Safari):** Share → Add to Home Screen
+- **Android (Chrome):** ⋮ menu → Add to Home screen / Install app
+- **Desktop (Chrome/Edge):** the install icon in the address bar
+
+Inside the installed app, sign in with the **6-digit code** from the email. On iPhone, tapping the email link opens Safari, which doesn't share its sign-in with the home-screen app. The Supabase "Magic Link" email template needs `{{ .Token }}` in it for the code to appear.

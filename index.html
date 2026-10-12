@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#2f5bd3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Network" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <title>Network</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -60,7 +68,10 @@
       min-height: 100vh;
     }
     button, input, select, textarea { font: inherit; color: inherit; }
-    .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px 64px; }
+    .wrap {
+      max-width: 920px; margin: 0 auto;
+      padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
 
     header {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -204,7 +215,14 @@
           <label for="login-email">Email</label>
           <input id="login-email" type="email" required autocomplete="email" placeholder="you@example.com" />
         </div>
-        <button class="btn primary" type="submit" style="width:100%">Send sign-in link</button>
+        <button class="btn primary" type="submit" style="width:100%">Email me a sign-in code</button>
+      </form>
+      <form id="code-form" class="hidden" style="margin-top:16px">
+        <div class="field">
+          <label for="login-code">Code from the email</label>
+          <input id="login-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required placeholder="123456" />
+        </div>
+        <button class="btn primary" type="submit" style="width:100%">Sign in</button>
       </form>
       <p id="login-msg" class="meta" style="margin:12px 0 0"></p>
     </section>
@@ -379,6 +397,7 @@
       state.user = user;
       $('login-view').classList.toggle('hidden', !!user);
       $('app-view').classList.toggle('hidden', !user);
+      if (!user) { $('code-form').classList.add('hidden'); $('login-code').value = ''; }
       if (user) {
         $('who').textContent = user.email;
         if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname);
@@ -393,7 +412,20 @@
       const redirect = location.origin + location.pathname;
       const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect, shouldCreateUser: false } });
       btn.disabled = false;
-      $('login-msg').textContent = error ? `Couldn't send link: ${error.message}` : `Check ${email} for your sign-in link.`;
+      if (error) { $('login-msg').textContent = `Couldn't send email: ${error.message}`; return; }
+      $('code-form').classList.remove('hidden');
+      $('login-code').focus();
+      $('login-msg').textContent = `Sent to ${email}. Type the code here, or tap the link if you're in a browser.`;
+    });
+
+    // Codes matter for the home-screen app: on iPhone, a tapped email link opens in Safari,
+    // which doesn't share its sign-in with the installed app.
+    $('code-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.submitter; btn.disabled = true;
+      const { error } = await sb.auth.verifyOtp({ email: $('login-email').value.trim(), token: $('login-code').value.trim(), type: 'email' });
+      btn.disabled = false;
+      if (error) $('login-msg').textContent = `That code didn't work: ${error.message}`;
     });
 
     $('logout-btn').addEventListener('click', async () => { await sb.auth.signOut(); setUser(null); });
@@ -706,6 +738,7 @@
     });
 
     init();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   </script>
 </body>
 </html>
